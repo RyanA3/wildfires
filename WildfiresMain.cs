@@ -26,11 +26,12 @@ namespace WildfiresMod
         bool requested_asset_bundles_load = false;
         bool added_shader = false;
         bool loaded_mask_atlas = false;
+
+        bool handle_restart = false;
         private LoadedAssetBundle asset_bundle;
 
-        private GlobalFireManager fireman;
-
-        private GlobalEffectHandler effection;
+        public static GlobalFireManager fireman;
+        private GlobalEffectHandler effectman;
 
 
 
@@ -41,10 +42,16 @@ namespace WildfiresMod
 
             On.Room.Loaded += RoomLoaded;
             On.Room.Update += RoomUpdate;
+            On.Room.ShortCutsReady += RoomShortcutsReady;
             On.RainWorld.Update += RainWorldUpdate;
             On.RoomCamera.ApplyPalette += RoomCameraApplyPalette;
             On.RoomCamera.DrawUpdate += RoomCameraDrawUpdate;
             On.RoomCamera.ChangeRoom += RoomCameraChangeRoom;
+            On.RainWorldGame.Update += GameUpdate;
+            On.RainWorldGame.RestartGame += GameRestart;
+            On.RainWorldGame.GoToDeathScreen += GameDeathScreen;
+            On.RainWorldGame.GameOver += GameOver;
+            On.Creature.Update += CreatureUpdate;
 
         }
 
@@ -72,6 +79,15 @@ namespace WildfiresMod
             if (fireman != null)
                 fireman.HandleRoomLoad(self);
 
+        }
+
+        //Load shortcut connections for fire data once a room's shortcuts are loaded
+        void RoomShortcutsReady(On.Room.orig_ShortCutsReady orig, Room self)
+        {
+            orig(self);
+
+            if (fireman != null)
+                fireman.HandleShortcutsLoad(self);
         }
 
 
@@ -130,15 +146,46 @@ namespace WildfiresMod
             
             orig(self);
 
-            if (effection != null)
-                effection.Update();
-            
+            if (effectman != null)
+                effectman.Update();
+
+            //TODO: Handle world changing (in RainWorldGame?) to change firemanager's world whenever the world is changed
+            if (fireman != null && fireman.world == null)
+                fireman.world = self.world;
+
         }
 
+        void CreatureUpdate(On.Creature.orig_Update orig, Creature self, bool eu)
+        {
+            orig(self, eu);
+
+            if (self == null)
+                return;
+
+            if (effectman != null)
+                effectman.HandleCreatureUpdate(self);
+        }
         
+        //Clear all effects since the world will be reset
+        void GameRestart(On.RainWorldGame.orig_RestartGame orig, RainWorldGame self)
+        {
+            orig(self);
 
+            //effectman.ClearAllEffects();
+            effectman = new GlobalEffectHandler(fireman);
+        }
 
+        void GameOver(On.RainWorldGame.orig_GameOver orig, RainWorldGame self, Creature.Grasp grasp)
+        {
+            orig(self, grasp);
 
+        }
+
+        void GameDeathScreen(On.RainWorldGame.orig_GoToDeathScreen orig, RainWorldGame self)
+        {
+            orig(self);
+            effectman.ClearAllEffects();
+        }
 
 
 
@@ -198,13 +245,13 @@ namespace WildfiresMod
             //Load the fire manager
             if(fireman == null)
             {
-                fireman = new GlobalFireManager();
+                fireman = new GlobalFireManager(null);
             }
 
             //Load the effect manager
-            if(effection == null)
+            if(effectman == null && fireman != null)
             {
-                effection = new GlobalEffectHandler();
+                effectman = new GlobalEffectHandler(fireman);
             }
  
         }

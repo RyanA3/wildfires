@@ -13,7 +13,7 @@ namespace RW_19_Modding
         private static readonly int MIN_LIFETIME = 30;
         private static readonly int MAX_LIFESPAN = 30;
 
-        private float life;
+        private float life = 1;
         private float life_decrement;
 
         public FireParticle(Room room, Vector2 location)
@@ -34,8 +34,8 @@ namespace RW_19_Modding
             base.Update(eu);
 
             this.lastPos = pos;
-            this.vel.x += WeatherData.wind_x * WeatherData.wind_intensity;
-            this.vel.y += WeatherData.wind_y * WeatherData.wind_intensity;
+            this.vel.x += WeatherData.wind_x * WeatherData.wind_intensity * UnityEngine.Random.value;
+            this.vel.y += WeatherData.wind_y * WeatherData.wind_intensity * UnityEngine.Random.value;
 
             this.life -= life_decrement;
 
@@ -55,8 +55,8 @@ namespace RW_19_Modding
         public override void DrawSprites(RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
         {
 
-            sLeaser.sprites[0].x = Mathf.Lerp(lastPos.x, pos.x, timeStacker);
-            sLeaser.sprites[0].y = Mathf.Lerp(lastPos.y, pos.y, timeStacker);
+            sLeaser.sprites[0].x = Mathf.Lerp(lastPos.x, pos.x, timeStacker) - camPos.x;
+            sLeaser.sprites[0].y = Mathf.Lerp(lastPos.y, pos.y, timeStacker) - camPos.y;
             sLeaser.sprites[0].scale = life;
             sLeaser.sprites[0].color = RWCustom.Custom.HSL2RGB(Mathf.Lerp(0.01f, 0.08f, life), 1f, Mathf.Lerp(0.5f, 1f, Mathf.Pow(life, 3f)));
 
