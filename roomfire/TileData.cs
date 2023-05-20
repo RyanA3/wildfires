@@ -12,9 +12,11 @@ namespace RW_19_Modding
 
         public int index;
         public int tilex, tiley;
-        public bool flammable, burning;
+        public bool flammable, burning, is_shortcut;
         public bool can_spread;
         public byte direction_data;
+
+        public int time = 0;
 
         public TileData(int index, int tilex, int tiley, bool flammable, bool burning, byte direction_data)
         {
@@ -31,6 +33,13 @@ namespace RW_19_Modding
 
 
 
+        public void Update()
+        {
+            time++;
+        }
+
+
+
         public void CopyStatus(TileData other)
         {
             this.flammable = other.flammable;
@@ -40,17 +49,6 @@ namespace RW_19_Modding
         }
 
 
-        public void LinkShortcut(GlobalFireManager fireman, ShortcutTileData other, string this_room_name)
-        {
-
-            ShortcutTileData this_shortcut = new ShortcutTileData(index, tilex, tiley, flammable, burning, direction_data, this_room_name, other);
-
-            fireman.room_fires[this_room_name].updateFireData(this_shortcut);
-
-        }
-
-
-
         public int CompareTo(TileData other)
         {
             return other.index - this.index;
@@ -58,12 +56,15 @@ namespace RW_19_Modding
 
     }
 
+    /*
     public class ShortcutTileData : TileData
     {
 
         public string room_name;
         public ShortcutTileData exit;
         public bool has_spread_to_exit = false;
+        public int shortcut = -1;
+        public int enterance = -1;
 
         public ShortcutTileData(int index, int tilex, int tiley, bool flammable, bool burning, byte direction_data,
             string room_name, ShortcutTileData exit) : base(index, tilex, tiley, flammable, burning, direction_data)
@@ -72,12 +73,34 @@ namespace RW_19_Modding
             this.exit = exit;
         }
 
+
+
+        public void Update(Room room)
+        {
+            base.Update();
+            if (room == null) return;
+
+            if (shortcut == -1)
+                findShortcut(room);
+
+        }
+
+        private void findShortcut(Room room)
+        {
+            if (!room.shortCutsReady) return;
+            for (int i = 0; i < room.shortcutsIndex.Length; i++)
+                if (room.shortcutsIndex[i].x == tilex && room.shortcutsIndex[i].y == tiley)
+                    shortcut = i;
+        }
+
+
+
         public void SpreadToExit()
         {
             if (exit == null) return;
             has_spread_to_exit = WildfiresMain.fireman.ignite(exit.room_name, exit.tilex, exit.tiley);
         }
 
-    }
+    }*/
 
 }

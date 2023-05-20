@@ -161,7 +161,7 @@ namespace RW_19_Modding
 
 
             //Apply the fire shader to the screen
-            camera.SetUpFullScreenEffect("Foreground");
+            camera.SetUpFullScreenEffect("Water");
             camera.fullScreenEffect.shader = camera.game.rainWorld.Shaders["Fire"];
 
             Shader.SetGlobalInt("_fireDepthCutoff", 5);
@@ -178,7 +178,7 @@ namespace RW_19_Modding
 
             //Pass on room update to the fire manager
             if (room_fires.ContainsKey(room.abstractRoom.name))
-                room_fires[room.abstractRoom.name].Update(current_room_fire != null && room.abstractRoom.name == current_room_fire.room_name);
+                room_fires[room.abstractRoom.name].Update(room, current_room_fire != null && room.abstractRoom.name == current_room_fire.room_name);
 
         }
 

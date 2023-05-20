@@ -12,15 +12,15 @@ namespace RW_19_Modding
     {
 
         bool complete = false;
-        byte this_tile_data;
+        TileData data;
         int tx, ty;
 
         private static float LIFETIME_DEC = (1f / 25.0f);
         private float life;
 
-        public TileFireFadeInOperation(byte this_tile_data, int tx, int ty)
+        public TileFireFadeInOperation(TileData data, int tx, int ty)
         {
-            this.this_tile_data = this_tile_data;
+            this.data = data;
             this.tx = tx;
             this.ty = ty;
 
@@ -58,7 +58,7 @@ namespace RW_19_Modding
         public void WriteToMask(Texture2D fire_mask)
         {
 
-            TileDirectionData.writeToFireMask(fire_mask, tx, ty, this_tile_data, 1 - life);
+            TileDirectionData.writeToFireMask(fire_mask, tx, ty, data.direction_data, 1 - life);
 
         }
 

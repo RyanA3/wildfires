@@ -44,6 +44,7 @@ namespace WildfiresMod
             On.Room.Update += RoomUpdate;
             On.Room.ShortCutsReady += RoomShortcutsReady;
             On.RainWorld.Update += RainWorldUpdate;
+            On.RoomCamera.ctor += RoomCameraConstruct;
             On.RoomCamera.ApplyPalette += RoomCameraApplyPalette;
             On.RoomCamera.DrawUpdate += RoomCameraDrawUpdate;
             On.RoomCamera.ChangeRoom += RoomCameraChangeRoom;
@@ -102,6 +103,15 @@ namespace WildfiresMod
         }
 
 
+        //Add the fire sprite layer infront of the shortcuts layer when the room camera is initialized
+        //TODO
+        void RoomCameraConstruct(On.RoomCamera.orig_ctor orig, RoomCamera self, RainWorldGame game, int cam_number)
+        {
+            orig(self, game, cam_number);
+
+        }
+
+
         //Apply global shader uniforms that may change on each frame
         void RoomCameraDrawUpdate(On.RoomCamera.orig_DrawUpdate orig, RoomCamera self, float timeStacker, float timeSpeed)
         {
@@ -112,6 +122,8 @@ namespace WildfiresMod
                 fireman.HandleCameraDrawUdate(self, timeStacker, timeSpeed);
 
         }
+
+
 
 
         //Apply the fire screen effect if the current room on camera has the fire effect

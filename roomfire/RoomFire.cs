@@ -9,6 +9,7 @@ using RWCustom;
 using MoreSlugcats;
 using System.Collections;
 using System.Reflection;
+using UnityEngine.Assertions.Must;
 
 namespace RW_19_Modding
 {
@@ -128,10 +129,6 @@ namespace RW_19_Modding
                     //Only set the data if it's flammable
                     if (!data.flammable) continue;
 
-                    //Convert to a shortcut tile data if this tile is a shortcut
-                    if (isTile(room, i, j, Room.Tile.TerrainType.ShortcutEntrance) && room.shortcutData(new IntVector2(i, j)).LeadingSomewhere)
-                        data = new ShortcutTileData(data.index, data.tilex, data.tiley, data.flammable, data.burning, data.direction_data, room_name, null);
-
                     //Ensure this data isn't already set (preloaded shortcuts, etc)
                     TileData preset = getFireData(i, j);
                     if (preset != TileData.NONE)
@@ -182,16 +179,17 @@ namespace RW_19_Modding
 
 
 
-        //TOOD: Fire spreading between two shortcuts within the same room is working, but not between multiple rooms
+
+        //Should be called after load, may access other room fires before their load function is called however
         public void linkShortcuts(Room room, GlobalFireManager fireman)
         {
 
-            foreach (ShortcutData shortcut in room.shortcuts)
+            /*foreach (ShortcutData shortcut in room.shortcuts)
             {
                 if (!shortcut.LeadingSomewhere) continue;
                 TileData start_data_processing = getFireData(shortcut.StartTile.x, shortcut.StartTile.y);
 
-                //Ignore this shortcut if it's already been initialized
+                //Ignore this shortcut if it has already been initialized by another room
                 if (start_data_processing is ShortcutTileData && (start_data_processing as ShortcutTileData).exit != null)
                 {
                     Debug.Log("RoomFire(" + room_name + "): Shortcut already linked, skip");
@@ -200,42 +198,56 @@ namespace RW_19_Modding
 
                 ShortcutTileData start_data = new ShortcutTileData(start_data_processing.index, start_data_processing.tilex, start_data_processing.tiley, true, false, start_data_processing.direction_data, room_name, null);
                 updateFireData(start_data);
-                
-                ShortcutTileData end_data;
+
+
 
                 TileData end_data_processing;
-
+                ShortcutTileData end_data;
                 
+                //Link shortcuts in the same room
                 if (shortcut.shortCutType == ShortcutData.Type.Normal) 
                 {
+
                     Debug.Log("RoomFire(" + room_name + "): Linking Shortcut in same room");
-                    //If the room of the destination tile is the same as this room, grab that destination data from this room
+
+                    //Grab tile data for the destination of the shortcut
                     end_data_processing = getFireData(shortcut.DestTile.x, shortcut.DestTile.y);
 
-                    //If the exit shortcut wasn't initialized in this room for some reason (it always should be, but just in case)
-                    //Then initialize it
+                    //If the exit shortcut wasn't initialized in this room then initialize it
                     if (end_data_processing is ShortcutTileData)
-                        end_data = end_data_processing as ShortcutTileData;
-                    else /*if (end_data_processing == TileData.NONE)*/
                     {
-                        end_data = new ShortcutTileData(shortcut.DestTile.x + shortcut.DestTile.y * tile_width, shortcut.DestTile.x, shortcut.DestTile.y, 
+                        (end_data_processing as ShortcutTileData).exit = start_data;
+                        start_data.exit = (ShortcutTileData) end_data_processing;
+                        continue;
+                    }
+                    else /*if (end_data_processing == TileData.NONE)*//*
+                    {
+                        end_data = new ShortcutTileData(shortcut.DestTile.x + shortcut.DestTile.y * tile_width, shortcut.DestTile.x, shortcut.DestTile.y,
                             true, false, TileDirectionData.BASE_BITS, room_name, null);
                         updateFireData(end_data);
                     }
 
                 } else if (shortcut.shortCutType == ShortcutData.Type.RoomExit)
                 {
+
+
+                    //Get the room the shortcut leads to
+                    AbstractRoom end_room = room.world.GetAbstractRoom(shortcut.destinationCoord.room);
+                    AbstractRoom start_room = room.world.GetAbstractRoom(shortcut.startCoord.room);
+                    Debug.Log("Shortcut: " + start_room.name + "->" + end_room.name + " (" + shortcut.startCoord.x + "," + shortcut.startCoord.y + ")" + "->(" + shortcut.destinationCoord.x + "," + shortcut.destinationCoord.y + ") Node: " + shortcut.startCoord.abstractNode + "->" + shortcut.destinationCoord.abstractNode);
+
+
                     //Find the exit room
-                    AbstractRoom end_room = room.WhichRoomDoesThisExitLeadTo(shortcut.DestTile);
+                    //AbstractRoom end_room = room.WhichRoomDoesThisExitLeadTo(shortcut.DestTile);
+
 
                     //Ensure the end room isn't null ? and is loaded
-                    if(end_room == null || end_room.realizedRoom == null)
+                    if (end_room == null || end_room.realizedRoom == null)
                     {
                         Debug.Log("RoomFire(" + room_name + "): Failed to link shortcut: Destination room unspecified");
                         continue;
                     }
 
-                    //Find the shortcut in the other room that links to this one
                     int other_shortcut_data_index = -1;
                     for(int i = 0; i < end_room.realizedRoom.shortcuts.Length; i++)
                     {
@@ -254,6 +266,7 @@ namespace RW_19_Modding
                         Debug.Log("RoomFire(" + room_name + "): Failed to link shortcut: Destination shortcut not found");
                         continue;
                     }
+                    
 
                     ShortcutData other_shortcut = end_room.realizedRoom.shortcuts[other_shortcut_data_index];
 
@@ -266,13 +279,13 @@ namespace RW_19_Modding
                     //The elements added before initialization will be sorted once the room's tile width and height is known
                     if (end_data_processing is ShortcutTileData)
                         end_data = end_data_processing as ShortcutTileData;
-                    else /*if (end_data_processing == TileData.NONE)*/
+                    else /*if (end_data_processing == TileData.NONE)*//*
                     {
                         end_data = new ShortcutTileData(other_shortcut.StartTile.x + other_shortcut.StartTile.y * fireman.room_fires[end_room.name].tile_width,
-                            other_shortcut.StartTile.x, other_shortcut.StartTile.y, true, false, TileDirectionData.BASE_BITS, end_room.name, null);
+                            other_shortcut.StartTile.x, other_shortcut.StartTile.y, true, false, TileDirectionData.BASE_BITS, other_shortcut.room.abstractRoom.name, null);
                         fireman.updateFireData(end_data, end_room.name);
                     }
-                
+
                 } else
                 {
                     Debug.Log("RoomFire(" + room_name + "): Failed to link shortcut '" + shortcut.shortCutType.value + "'");
@@ -283,9 +296,12 @@ namespace RW_19_Modding
                 start_data.exit = end_data;
                 end_data.exit = start_data;
 
+                
+
                 Debug.Log("RoomFire(" + room_name + "): Linked Shortcuts: " + start_data.room_name + "->" + end_data.room_name);
 
             }
+            */
 
             //Celebrate profusely
             shortcuts_loaded = true;
@@ -399,11 +415,17 @@ namespace RW_19_Modding
 
             //Write to the mask
             if(should_fade) //If the current screen is being viewed, add a smooth fading operation
-                fading_operations.Add(new TileFireFadeInOperation(data.direction_data, x, y));
+                fading_operations.Add(new TileFireFadeInOperation(data, x, y));
             else            //Otherwise write to the fire mask immediately 
                 TileDirectionData.writeToFireMask(fire_mask, x, y, data.direction_data, 1.0f);
 
             should_update_mask = true;
+
+        }
+
+        //Works like ignite, but has special conditions based on where the fire is spreading from/to
+        public void spread(TileData from, TileData to, bool should_fade)
+        {
 
         }
 
@@ -439,12 +461,19 @@ namespace RW_19_Modding
         /*
          *   UPDATE HANDLING
          */
-        public /*override*/ void Update(/*bool eu*/bool on_screen)
+        public /*override*/ void Update(Room room, /*bool eu*/bool on_screen)
         {
 
             //Spread fire to adjacent tiles here
             foreach (TileData data in tile_statuses)
             {
+
+                //if (data is ShortcutTileData)
+                //    (data as ShortcutTileData).Update(room);
+                //else
+                    data.Update();
+
+
                 if (!data.burning)
                     continue;
 
@@ -455,8 +484,8 @@ namespace RW_19_Modding
                 if (UnityEngine.Random.value < 0.95f) 
                     continue;
 
-                if (data is ShortcutTileData && !(data as ShortcutTileData).has_spread_to_exit)
-                    (data as ShortcutTileData).SpreadToExit();
+                //if (data is ShortcutTileData && !(data as ShortcutTileData).has_spread_to_exit)
+                //    (data as ShortcutTileData).SpreadToExit();
 
                 ignite(data.tilex + 1, data.tiley, on_screen);
                 ignite(data.tilex, data.tiley + 1, on_screen);
@@ -495,6 +524,7 @@ namespace RW_19_Modding
 
         //TODO: See https://forum.unity.com/threads/async-texture2d-creation-with-jobs.530474/ about creating procedural textures (reading/writing to textures on
         // a seperate thread) to stop the main game rendering loop from halting when a lot of updates need to be applied to the fire mask texture
+        private static Color FIRE_SHORTCUT_COLOR = new Color(0.8f, 0.2f, 0.2f);
         public void HandleCameraDrawUpdate(RoomCamera self, float timeStacker, float timeSpeed)
         {
 
@@ -514,6 +544,26 @@ namespace RW_19_Modding
                 fire_mask.Apply();
                 should_update_mask = false;
             }
+
+
+            //Only continue if shortcuts are ready
+            if (self == null || self.shortcutGraphics == null) return;
+
+            //Make all shortcut entrances with a fire on the other side light up red
+            /*
+            foreach (TileData data in tile_statuses)
+            {
+
+                //if (!(data is ShortcutTileData)) continue;
+                //ShortcutTileData sdata = data as ShortcutTileData;
+
+                if (sdata.shortcut == -1 || sdata.shortcut >= self.shortcutGraphics.entranceSpriteLocations.Length) continue;
+
+                if(sdata.burning || (sdata.exit != null && sdata.exit.burning))
+                    self.shortcutGraphics.ColorEntrance(sdata.shortcut, FIRE_SHORTCUT_COLOR);
+
+
+            }*/
 
         }
 
