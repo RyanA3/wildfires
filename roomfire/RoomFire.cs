@@ -18,6 +18,15 @@ namespace RW_19_Modding
 
         public string room_name;
 
+        /*
+         * NOTE TO SELF 2-24-24
+         * Optimisation? Change implementation of the TileData list to an
+         * array-based hashmap, keys being the 1d index of the tile in the
+         * room. This would reduce access time to constant, and would allow
+         * for cache locality? since the data would be stored in an array close
+         * together. The hashmap would use less memory than a 2d array of the
+         * entire room.
+         */
         private List<TileData> tile_statuses;
 
         private int tile_width, tile_height;
